@@ -1,16 +1,16 @@
 package br.com.fiap.dao;
 
+import br.com.fiap.exception.CampoJaCadastradoException;
 import br.com.fiap.exception.EntidadeNaoEncontradaException;
-import br.com.fiap.exception.RegraNegocioException;
 import br.com.fiap.model.Empresa;
 import br.com.fiap.model.Endereco;
+import br.com.fiap.model.Simulacao;
 import br.com.fiap.model.Usuario;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 import javax.sql.DataSource;
 import java.sql.*;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,33 +21,51 @@ public class UsuarioDAO {
     private DataSource dataSource;
 
     @Inject
-    private EnderecoDAO enderecoDao;
+    private EmpresaDAO empresaDAO;
 
     @Inject
-    private EmpresaDAO empresaDao;
+    private EnderecoDAO enderecoDAO;
 
-    public void inserir(Usuario usuario) throws SQLException, RegraNegocioException {
-        String sql = """
-                INSERT INTO USUARIO
-                (ID_USUARIO, NOME, EMAIL, TELEFONE, DATA_NASCIMENTO,
-                 ID_ENDERECO, USERNAME, SENHA, SALARIO, TIPO_CONTRATO, ID_EMPRESA)
-                VALUES (SEQ_USUARIO.NEXTVAL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """;
+    // Métodos públicos que gerenciam a conexão
+    public Usuario inserir(Usuario usuario) throws SQLException, CampoJaCadastradoException {
+        try (Connection conn = dataSource.getConnection()) {
+            return inserir(usuario, conn);
+        }
+    }
 
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql, new String[]{"ID_USUARIO"})) {
+    public List<Usuario> listarTodos() throws SQLException {
+        try (Connection conn = dataSource.getConnection()) {
+            return listarTodos(conn);
+        }
+    }
 
-            ps.setString(1, usuario.getNome());
-            ps.setString(2, usuario.getEmail());
-            ps.setString(3, usuario.getTelefone());
-            ps.setDate(4, Date.valueOf(usuario.getDataNascimento()));
-            ps.setInt(5, usuario.getEndereco().getIdEndereco());
-            ps.setString(6, usuario.getUsername());
-            ps.setString(7, usuario.getSenha());
-            ps.setDouble(8, usuario.getSalario());
-            ps.setString(9, usuario.getTipoContrato());
-            ps.setInt(10, usuario.getEmpresa().getIdEmpresa());
+    public Usuario buscarPorId(int id) throws SQLException, EntidadeNaoEncontradaException {
+        try (Connection conn = dataSource.getConnection()) {
+            return buscarPorId(id, conn, true); // Por padrão, busca as simulações
+        }
+    }
 
+    public void atualizar(Usuario usuario) throws SQLException, EntidadeNaoEncontradaException, CampoJaCadastradoException {
+        try (Connection conn = dataSource.getConnection()) {
+            atualizar(usuario, conn);
+        }
+    }
+
+    public void deletar(int id) throws SQLException, EntidadeNaoEncontradaException {
+        try (Connection conn = dataSource.getConnection()) {
+            deletar(id, conn);
+        }
+    }
+
+    // Métodos privados que usam a conexão fornecida
+    private Usuario inserir(Usuario usuario, Connection conn) throws SQLException, CampoJaCadastradoException {
+        String sql = "INSERT INTO TB_LEXIA_USUARIO (ID_USUARIO, USER_NAME, VL_SALARIO, SENHA_USUARIO, TIPO_CONTRATO, TB_LEXIA_EMPRESA_ID_EMPRESA) VALUES (SEQ_USUARIO.NEXTVAL, ?, ?, ?, ?, ?)";
+        try (PreparedStatement ps = conn.prepareStatement(sql, new String[]{"ID_USUARIO"})) {
+            ps.setString(1, usuario.getUsername());
+            ps.setDouble(2, usuario.getSalario());
+            ps.setString(3, usuario.getSenha());
+            ps.setString(4, usuario.getTipoContrato());
+            ps.setInt(5, usuario.getEmpresa().getIdEmpresa());
             ps.executeUpdate();
 
             try (ResultSet rs = ps.getGeneratedKeys()) {
@@ -56,196 +74,147 @@ public class UsuarioDAO {
                 }
             }
 
-        } catch (SQLException e) {
-            if (e.getErrorCode() == 2291) {
-                throw new RegraNegocioException("Endereço ou empresa inválidos (violação de FK).");
+            if (usuario.getEnderecos() != null) {
+                for (Endereco endereco : usuario.getEnderecos()) {
+                    inserirRelacionamentoUsuarioEndereco(usuario.getIdUsuario(), endereco.getIdEndereco(), conn);
+                }
             }
+        } catch (SQLException e) {
             if (e.getErrorCode() == 1) {
-                throw new RegraNegocioException("Username ou email já existente.");
+                throw new CampoJaCadastradoException("Username já cadastrado.");
+            }
+            throw e;
+        }
+        return usuario;
+    }
+
+    private List<Usuario> listarTodos(Connection conn) throws SQLException {
+        List<Usuario> usuarios = new ArrayList<>();
+        String sql = "SELECT * FROM TB_LEXIA_USUARIO";
+        try (PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                usuarios.add(parseUsuario(rs, conn, true));
+            }
+        }
+        return usuarios;
+    }
+
+    public Usuario buscarPorId(int id, Connection conn, boolean buscarSimulacoes) throws SQLException, EntidadeNaoEncontradaException {
+        String sql = "SELECT * FROM TB_LEXIA_USUARIO WHERE ID_USUARIO = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return parseUsuario(rs, conn, buscarSimulacoes);
+                } else {
+                    throw new EntidadeNaoEncontradaException("Usuário não encontrado");
+                }
+            }
+        }
+    }
+
+    private void atualizar(Usuario usuario, Connection conn) throws SQLException, EntidadeNaoEncontradaException, CampoJaCadastradoException {
+        String sql = "UPDATE TB_LEXIA_USUARIO SET USER_NAME = ?, VL_SALARIO = ?, SENHA_USUARIO = ?, TIPO_CONTRATO = ?, TB_LEXIA_EMPRESA_ID_EMPRESA = ? WHERE ID_USUARIO = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, usuario.getUsername());
+            ps.setDouble(2, usuario.getSalario());
+            ps.setString(3, usuario.getSenha());
+            ps.setString(4, usuario.getTipoContrato());
+            ps.setInt(5, usuario.getEmpresa().getIdEmpresa());
+            ps.setInt(6, usuario.getIdUsuario());
+            if (ps.executeUpdate() == 0) {
+                throw new EntidadeNaoEncontradaException("Usuário não encontrado");
+            }
+
+            deletarRelacionamentoUsuarioEndereco(usuario.getIdUsuario(), conn);
+            if (usuario.getEnderecos() != null) {
+                for (Endereco endereco : usuario.getEnderecos()) {
+                    inserirRelacionamentoUsuarioEndereco(usuario.getIdUsuario(), endereco.getIdEndereco(), conn);
+                }
+            }
+        } catch (SQLException e) {
+            if (e.getErrorCode() == 1) {
+                throw new CampoJaCadastradoException("Username já cadastrado.");
             }
             throw e;
         }
     }
 
-    public List<Usuario> listarTodos() throws SQLException {
-        List<Usuario> usuarios = new ArrayList<>();
-
-        String sql = """
-                SELECT
-                    u.ID_USUARIO,
-                    u.NOME,
-                    u.EMAIL,
-                    u.TELEFONE,
-                    u.DATA_NASCIMENTO,
-                    u.ID_ENDERECO,
-                    u.USERNAME,
-                    u.SENHA,
-                    u.SALARIO,
-                    u.TIPO_CONTRATO,
-                    u.ID_EMPRESA,
-
-                    e.LOGRADOURO,
-                    e.NUMERO,
-                    e.COMPLEMENTO,
-                    e.BAIRRO,
-                    e.CIDADE,
-                    e.ESTADO,
-                    e.CEP,
-
-                    em.NOME_FANTASIA,
-                    em.CNPJ,
-                    em.EMAIL AS EMP_EMAIL,
-                    em.TELEFONE AS EMP_TELEFONE
-                FROM USUARIO u
-                LEFT JOIN ENDERECO e ON u.ID_ENDERECO = e.ID_ENDERECO
-                LEFT JOIN EMPRESA em ON u.ID_EMPRESA = em.ID_EMPRESA
-                """;
-
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-
-            while (rs.next()) {
-                usuarios.add(parseUsuario(rs));
+    private void deletar(int id, Connection conn) throws SQLException, EntidadeNaoEncontradaException {
+        deletarRelacionamentoUsuarioEndereco(id, conn);
+        deletarRelacionamentoUsuarioSimulacao(id, conn);
+        String sql = "DELETE FROM TB_LEXIA_USUARIO WHERE ID_USUARIO = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            if (ps.executeUpdate() == 0) {
+                throw new EntidadeNaoEncontradaException("Usuário não encontrado");
             }
         }
-
-        return usuarios;
     }
 
-    public Usuario buscarPorCodigo(int id) throws SQLException, EntidadeNaoEncontradaException {
-        String sql = """
-                SELECT
-                    u.ID_USUARIO,
-                    u.NOME,
-                    u.EMAIL,
-                    u.TELEFONE,
-                    u.DATA_NASCIMENTO,
-                    u.ID_ENDERECO,
-                    u.USERNAME,
-                    u.SENHA,
-                    u.SALARIO,
-                    u.TIPO_CONTRATO,
-                    u.ID_EMPRESA,
+    private void inserirRelacionamentoUsuarioEndereco(int idUsuario, int idEndereco, Connection conn) throws SQLException {
+        String sql = "INSERT INTO TB_LEXIA_R_USER_END (ID_USUARIO, ID_END) VALUES (?, ?)";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, idUsuario);
+            ps.setInt(2, idEndereco);
+            ps.executeUpdate();
+        }
+    }
 
-                    e.LOGRADOURO,
-                    e.NUMERO,
-                    e.COMPLEMENTO,
-                    e.BAIRRO,
-                    e.CIDADE,
-                    e.ESTADO,
-                    e.CEP,
+    private void deletarRelacionamentoUsuarioEndereco(int idUsuario, Connection conn) throws SQLException {
+        String sql = "DELETE FROM TB_LEXIA_R_USER_END WHERE ID_USUARIO = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, idUsuario);
+            ps.executeUpdate();
+        }
+    }
 
-                    em.NOME_FANTASIA,
-                    em.CNPJ,
-                    em.EMAIL AS EMP_EMAIL,
-                    em.TELEFONE AS EMP_TELEFONE
-                FROM USUARIO u
-                LEFT JOIN ENDERECO e ON u.ID_ENDERECO = e.ID_ENDERECO
-                LEFT JOIN EMPRESA em ON u.ID_EMPRESA = em.ID_EMPRESA
-                WHERE u.ID_USUARIO = ?
-                """;
+    private void deletarRelacionamentoUsuarioSimulacao(int idUsuario, Connection conn) throws SQLException {
+        String sql = "DELETE FROM TB_LEXIA_R_USER_SIM WHERE ID_USUARIO = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, idUsuario);
+            ps.executeUpdate();
+        }
+    }
 
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+    public Usuario parseUsuario(ResultSet rs, Connection conn, boolean buscarSimulacoes) throws SQLException {
+        Usuario usuario = new Usuario();
+        usuario.setIdUsuario(rs.getInt("ID_USUARIO"));
+        usuario.setUsername(rs.getString("USER_NAME"));
+        usuario.setSalario(rs.getDouble("VL_SALARIO"));
+        usuario.setSenha(rs.getString("SENHA_USUARIO"));
+        usuario.setTipoContrato(rs.getString("TIPO_CONTRATO"));
 
-            ps.setInt(1, id);
+        try {
+            Empresa empresa = empresaDAO.buscarPorId(rs.getInt("TB_LEXIA_EMPRESA_ID_EMPRESA"), conn);
+            usuario.setEmpresa(empresa);
+        } catch (EntidadeNaoEncontradaException e) {
+            // Ignorar
+        }
 
+        usuario.setEnderecos(buscarEnderecosPorUsuario(usuario.getIdUsuario(), conn));
+        
+        if (buscarSimulacoes) {
+            // A injeção do SimulacaoDAO é feita via setter para quebrar o ciclo de dependência do CDI
+            // SimulacaoDAO simulacaoDAO = CDI.current().select(SimulacaoDAO.class).get();
+            // usuario.setSimulacoes(simulacaoDAO.buscarSimulacoesPorUsuario(usuario.getIdUsuario(), conn));
+        }
+
+        return usuario;
+    }
+
+    private List<Endereco> buscarEnderecosPorUsuario(int idUsuario, Connection conn) throws SQLException {
+        List<Endereco> enderecos = new ArrayList<>();
+        String sql = "SELECT e.ID_END, e.LOGRA_END, e.NUM_END, e.COMPLE_END, e.BAIRRO_END, e.CID_END, e.ESTADO_END, e.CEP_END FROM TB_LEXIA_ENDERECO e JOIN TB_LEXIA_R_USER_END r ON e.ID_END = r.ID_END WHERE r.ID_USUARIO = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, idUsuario);
             try (ResultSet rs = ps.executeQuery()) {
-                if (!rs.next()) {
-                    throw new EntidadeNaoEncontradaException("Usuário não encontrado.");
+                while (rs.next()) {
+                    enderecos.add(enderecoDAO.parseEndereco(rs));
                 }
-                return parseUsuario(rs);
             }
         }
-    }
-
-    public void atualizar(Usuario usuario) throws SQLException, EntidadeNaoEncontradaException {
-        String sql = """
-                UPDATE USUARIO SET
-                    NOME = ?,
-                    EMAIL = ?,
-                    TELEFONE = ?,
-                    DATA_NASCIMENTO = ?,
-                    ID_ENDERECO = ?,
-                    USERNAME = ?,
-                    SENHA = ?,
-                    SALARIO = ?,
-                    TIPO_CONTRATO = ?,
-                    ID_EMPRESA = ?
-                WHERE ID_USUARIO = ?
-                """;
-
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setString(1, usuario.getNome());
-            ps.setString(2, usuario.getEmail());
-            ps.setString(3, usuario.getTelefone());
-            ps.setDate(4, Date.valueOf(usuario.getDataNascimento()));
-            ps.setInt(5, usuario.getEndereco().getIdEndereco());
-            ps.setString(6, usuario.getUsername());
-            ps.setString(7, usuario.getSenha());
-            ps.setDouble(8, usuario.getSalario());
-            ps.setString(9, usuario.getTipoContrato());
-            ps.setInt(10, usuario.getEmpresa().getIdEmpresa());
-            ps.setInt(11, usuario.getIdUsuario());
-
-            if (ps.executeUpdate() == 0) {
-                throw new EntidadeNaoEncontradaException("Usuário não encontrado para atualizar.");
-            }
-        }
-    }
-
-    public void deletar(int id) throws SQLException, EntidadeNaoEncontradaException {
-        String sql = "DELETE FROM USUARIO WHERE ID_USUARIO = ?";
-
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setInt(1, id);
-
-            if (ps.executeUpdate() == 0) {
-                throw new EntidadeNaoEncontradaException("Usuário não encontrado para excluir.");
-            }
-        }
-    }
-
-    private Usuario parseUsuario(ResultSet rs) throws SQLException {
-        Endereco endereco = new Endereco(
-                rs.getInt("ID_ENDERECO"),
-                rs.getString("LOGRADOURO"),
-                rs.getString("NUMERO"),
-                rs.getString("COMPLEMENTO"),
-                rs.getString("BAIRRO"),
-                rs.getString("CIDADE"),
-                rs.getString("ESTADO"),
-                rs.getString("CEP")
-        );
-
-        Empresa empresa = new Empresa(
-                rs.getInt("ID_EMPRESA"),
-                rs.getString("NOME_FANTASIA"),
-                rs.getString("CNPJ"),
-                rs.getString("EMP_EMAIL"),
-                rs.getString("EMP_TELEFONE"),
-                null
-        );
-
-        LocalDate data = rs.getDate("DATA_NASCIMENTO").toLocalDate();
-
-        return new Usuario(
-                rs.getString("NOME"),
-                rs.getString("EMAIL"),
-                rs.getString("TELEFONE"),
-                endereco,
-                data,
-                rs.getInt("ID_USUARIO"),
-                rs.getString("USERNAME"),
-                rs.getString("SENHA"),
-                rs.getDouble("SALARIO"),
-                rs.getString("TIPO_CONTRATO"),
-                empresa
-        );
+        return enderecos;
     }
 }

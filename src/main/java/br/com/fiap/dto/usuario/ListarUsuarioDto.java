@@ -1,51 +1,39 @@
 package br.com.fiap.dto.usuario;
 
+import br.com.fiap.dto.empresa.ListarEmpresaDto;
+import br.com.fiap.dto.endereco.ListarEnderecoDto;
+import br.com.fiap.dto.simulacao.ListarSimulacaoDto;
+import com.fasterxml.jackson.annotation.JsonInclude;
+
+import java.util.List;
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ListarUsuarioDto {
 
     private int idUsuario;
-    private String nome;
-    private String email;
-    private String telefone;
-    private String dataNascimento;
     private String username;
     private double salario;
     private String tipoContrato;
+    private ListarEmpresaDto empresa;
+    private List<ListarEnderecoDto> enderecos;
+    private List<ListarSimulacaoDto> simulacoes;
 
-    private int idEndereco;
-    private String enderecoCompleto;
-
-    private int idEmpresa;
-    private String nomeEmpresa;
-
-    public ListarUsuarioDto(int idUsuario, String nome, String email, String telefone, String dataNascimento,
-                            String username, double salario, String tipoContrato,
-                            int idEndereco, String enderecoCompleto,
-                            int idEmpresa, String nomeEmpresa) {
-
+    public ListarUsuarioDto(int idUsuario, String username, double salario, String tipoContrato, ListarEmpresaDto empresa, List<ListarEnderecoDto> enderecos, List<ListarSimulacaoDto> simulacoes) {
         this.idUsuario = idUsuario;
-        this.nome = nome;
-        this.email = email;
-        this.telefone = telefone;
-        this.dataNascimento = dataNascimento;
         this.username = username;
         this.salario = salario;
         this.tipoContrato = tipoContrato;
-        this.idEndereco = idEndereco;
-        this.enderecoCompleto = enderecoCompleto;
-        this.idEmpresa = idEmpresa;
-        this.nomeEmpresa = nomeEmpresa;
+        this.empresa = empresa;
+        this.enderecos = enderecos;
+        this.simulacoes = simulacoes;
     }
 
+    // Getters
     public int getIdUsuario() { return idUsuario; }
-    public String getNome() { return nome; }
-    public String getEmail() { return email; }
-    public String getTelefone() { return telefone; }
-    public String getDataNascimento() { return dataNascimento; }
     public String getUsername() { return username; }
     public double getSalario() { return salario; }
     public String getTipoContrato() { return tipoContrato; }
-    public int getIdEndereco() { return idEndereco; }
-    public String getEnderecoCompleto() { return enderecoCompleto; }
-    public int getIdEmpresa() { return idEmpresa; }
-    public String getNomeEmpresa() { return nomeEmpresa; }
+    public ListarEmpresaDto getEmpresa() { return empresa; }
+    public List<ListarEnderecoDto> getEnderecos() { return enderecos; }
+    public List<ListarSimulacaoDto> getSimulacoes() { return simulacoes; }
 }

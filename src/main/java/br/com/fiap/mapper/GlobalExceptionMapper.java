@@ -19,48 +19,38 @@ public class GlobalExceptionMapper implements ExceptionMapper<Throwable> {
     @Override
     public Response toResponse(Throwable exception) {
 
-        if (exception instanceof ConstraintViolationException e) {
-            ValidationErrorDto dto = new ValidationErrorDto();
+        Response.Status status;
+        Object dto;
 
+        if (exception instanceof ConstraintViolationException e) {
+            status = Response.Status.BAD_REQUEST;
+            ValidationErrorDto validationErrorDto = new ValidationErrorDto();
             for (ConstraintViolation<?> v : e.getConstraintViolations()) {
-                dto.addError(
+                validationErrorDto.addError(
                         v.getPropertyPath().toString(),
                         v.getMessage()
                 );
             }
-
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(dto)
-                    .type(MediaType.APPLICATION_JSON)
-                    .build();
+            dto = validationErrorDto;
+        } else if (exception instanceof CampoJaCadastradoException e) {
+            status = Response.Status.CONFLICT;
+            dto = new ErrorResponseDto(e.getMessage(), status.getStatusCode());
+        } else if (exception instanceof DadoInvalidoException e) {
+            status = Response.Status.BAD_REQUEST;
+            dto = new ErrorResponseDto(e.getMessage(), status.getStatusCode());
+        } else if (exception instanceof RegraNegocioException e) {
+            status = Response.Status.BAD_REQUEST;
+            dto = new ErrorResponseDto(e.getMessage(), status.getStatusCode());
+        } else if (exception instanceof EntidadeNaoEncontradaException e) {
+            status = Response.Status.NOT_FOUND;
+            dto = new ErrorResponseDto(e.getMessage(), status.getStatusCode());
+        } else {
+            status = Response.Status.INTERNAL_SERVER_ERROR;
+            dto = new ErrorResponseDto("Erro interno no servidor.", status.getStatusCode());
         }
 
-        if (exception instanceof CampoJaCadastradoException e) {
-            return Response.status(Response.Status.CONFLICT)
-                    .entity(new ErrorResponseDto(e.getMessage()))
-                    .build();
-        }
-
-        if (exception instanceof DadoInvalidoException e) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new ErrorResponseDto(e.getMessage()))
-                    .build();
-        }
-
-        if (exception instanceof RegraNegocioException e) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new ErrorResponseDto(e.getMessage()))
-                    .build();
-        }
-
-        if (exception instanceof EntidadeNaoEncontradaException e) {
-            return Response.status(Response.Status.NOT_FOUND)
-                    .entity(new ErrorResponseDto(e.getMessage()))
-                    .build();
-        }
-
-        return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                .entity(new ErrorResponseDto("Erro interno no servidor."))
+        return Response.status(status)
+                .entity(dto)
                 .type(MediaType.APPLICATION_JSON)
                 .build();
     }

@@ -1,6 +1,7 @@
 package br.com.fiap.dto.empresa;
 
 import jakarta.validation.constraints.*;
+import java.util.List;
 
 public class CadastrarEmpresaDto {
 
@@ -17,8 +18,8 @@ public class CadastrarEmpresaDto {
     @NotBlank(message = "O telefone é obrigatório.")
     private String telefone;
 
-    @NotNull(message = "O ID do endereço é obrigatório.")
-    private Integer idEndereco;
+    @NotEmpty(message = "A lista de IDs de endereço não pode ser vazia.")
+    private List<Integer> idEnderecos;
 
     // Getters e Setters
     public String getNomeFantasia() { return nomeFantasia; }
@@ -33,6 +34,6 @@ public class CadastrarEmpresaDto {
     public String getTelefone() { return telefone; }
     public void setTelefone(String telefone) { this.telefone = telefone; }
 
-    public Integer getIdEndereco() { return idEndereco; }
-    public void setIdEndereco(Integer idEndereco) { this.idEndereco = idEndereco; }
+    public List<Integer> getIdEnderecos() { return idEnderecos; }
+    public void setIdEnderecos(List<Integer> idEnderecos) { this.idEnderecos = idEnderecos; }
 }

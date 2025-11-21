@@ -1,27 +1,19 @@
 package br.com.fiap.model;
 
+import java.util.List;
+
 public class Empresa {
     private int idEmpresa;
     private String nomeFantasia;
     private String cnpj;
     private String email;
     private String telefone;
-    private Endereco endereco;
+    private List<Endereco> enderecos;
 
-    // Construtor padrão
-    public Empresa() {}
-
-    public Empresa(int idEmpresa, String nomeFantasia, String cnpj, String email, String telefone, Endereco endereco) {
-        this.idEmpresa = idEmpresa;
-        this.nomeFantasia = nomeFantasia;
-        this.cnpj = cnpj;
-        this.email = email;
-        this.telefone = telefone;
-        this.endereco = endereco;
+    public Empresa() {
     }
 
-    //Getters & Setters
-
+    // Getters e Setters
     public int getIdEmpresa() {
         return idEmpresa;
     }
@@ -62,24 +54,11 @@ public class Empresa {
         this.telefone = telefone;
     }
 
-    public Endereco getEndereco() {
-        return endereco;
+    public List<Endereco> getEnderecos() {
+        return enderecos;
     }
 
-    public void setEndereco(Endereco endereco) {
-        this.endereco = endereco;
-    }
-
-    // toString
-    @Override
-    public String toString() {
-        return "Empresa {" +
-                "\n  idEmpresa=" + idEmpresa +
-                ",\n  nomeFantasia='" + nomeFantasia + '\'' +
-                ",\n  cnpj='" + cnpj + '\'' +
-                ",\n  email='" + email + '\'' +
-                ",\n  telefone='" + telefone + '\'' +
-                ",\n  endereco=" + endereco +
-                "\n}";
+    public void setEnderecos(List<Endereco> enderecos) {
+        this.enderecos = enderecos;
     }
 }

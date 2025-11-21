@@ -9,6 +9,7 @@ import br.com.fiap.mapper.EnderecoMapper;
 import br.com.fiap.model.Endereco;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -18,11 +19,12 @@ import java.util.stream.Collectors;
 public class EnderecoService {
 
     @Inject
-    EnderecoDAO enderecoDAO;
+    private EnderecoDAO enderecoDAO;
 
     @Inject
-    EnderecoMapper enderecoMapper;
+    private EnderecoMapper enderecoMapper;
 
+    @Transactional
     public ListarEnderecoDto cadastrar(CadastrarEnderecoDto dto) throws SQLException {
         Endereco endereco = enderecoMapper.toModel(dto);
         enderecoDAO.inserir(endereco);
@@ -30,32 +32,27 @@ public class EnderecoService {
     }
 
     public List<ListarEnderecoDto> listarTodos() throws SQLException {
-        return enderecoDAO.listarTodos()
-                .stream()
+        return enderecoDAO.listarTodos().stream()
                 .map(enderecoMapper::toDto)
                 .collect(Collectors.toList());
     }
 
-    public ListarEnderecoDto buscarPorId(int id)
-            throws SQLException, EntidadeNaoEncontradaException {
-
-        Endereco endereco = enderecoDAO.buscarPorCodigo(id);
+    public ListarEnderecoDto buscarPorId(int id) throws SQLException, EntidadeNaoEncontradaException {
+        Endereco endereco = enderecoDAO.buscarPorId(id);
         return enderecoMapper.toDto(endereco);
     }
 
-    public ListarEnderecoDto atualizar(int id, AtualizarEnderecoDto dto)
-            throws SQLException, EntidadeNaoEncontradaException {
-
-        Endereco existente = enderecoDAO.buscarPorCodigo(id);
+    @Transactional
+    public ListarEnderecoDto atualizar(int id, AtualizarEnderecoDto dto) throws SQLException, EntidadeNaoEncontradaException {
+        Endereco existente = enderecoDAO.buscarPorId(id);
         enderecoMapper.toModel(dto, existente);
         enderecoDAO.atualizar(existente);
-
         return enderecoMapper.toDto(existente);
     }
 
-    public void deletar(int id)
-            throws SQLException, EntidadeNaoEncontradaException {
-
+    @Transactional
+    public void deletar(int id) throws SQLException, EntidadeNaoEncontradaException {
+        enderecoDAO.buscarPorId(id); // Verifica se existe antes de deletar
         enderecoDAO.deletar(id);
     }
 }

@@ -1,40 +1,19 @@
 package br.com.fiap.model;
 
-import java.time.LocalDate;
+import java.util.List;
 
-public class Usuario extends Pessoa {
+public class Usuario {
+
     private int idUsuario;
     private String username;
-    private String senha;
     private double salario;
+    private String senha;
     private String tipoContrato;
     private Empresa empresa;
+    private List<Endereco> enderecos;
+    private List<Simulacao> simulacoes;
 
-    // Construtor padrão
     public Usuario() {
-        super();
-    }
-
-    // Construtor completo (com obrigatoriedade herdada)
-
-
-    public Usuario(int idUsuario, String username, String senha, double salario, String tipoContrato, Empresa empresa) {
-        this.idUsuario = idUsuario;
-        this.username = username;
-        this.senha = senha;
-        this.salario = salario;
-        this.tipoContrato = tipoContrato;
-        this.empresa = empresa;
-    }
-
-    public Usuario(String nome, String email, String telefone, Endereco endereco, LocalDate dataNascimento, int idUsuario, String username, String senha, double salario, String tipoContrato, Empresa empresa) {
-        super(nome, email, telefone, endereco, dataNascimento);
-        this.idUsuario = idUsuario;
-        this.username = username;
-        this.senha = senha;
-        this.salario = salario;
-        this.tipoContrato = tipoContrato;
-        this.empresa = empresa;
     }
 
     // Getters e Setters
@@ -54,20 +33,20 @@ public class Usuario extends Pessoa {
         this.username = username;
     }
 
-    public String getSenha() {
-        return senha;
-    }
-
-    public void setSenha(String senha) {
-        this.senha = senha;
-    }
-
     public double getSalario() {
         return salario;
     }
 
     public void setSalario(double salario) {
         this.salario = salario;
+    }
+
+    public String getSenha() {
+        return senha;
+    }
+
+    public void setSenha(String senha) {
+        this.senha = senha;
     }
 
     public String getTipoContrato() {
@@ -86,19 +65,19 @@ public class Usuario extends Pessoa {
         this.empresa = empresa;
     }
 
-    // toString()
-    @Override
-    public String toString() {
-        return "Usuário {" +
-                "\n  nome='" + getNome() + '\'' +
-                ",\n  email='" + getEmail() + '\'' +
-                ",\n  telefone='" + getTelefone() + '\'' +
-                ",\n  dataNascimento=" + getDataNascimento().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) +
-                ",\n  endereco=" + getEndereco() +
-                ",\n  username='" + username + '\'' +
-                ",\n  salario=" + salario +
-                ",\n  tipoContrato='" + tipoContrato + '\'' +
-                ",\n  Empresa='" + getEmpresa().getNomeFantasia() + '\'' +
-                "\n}";
+    public List<Endereco> getEnderecos() {
+        return enderecos;
+    }
+
+    public void setEnderecos(List<Endereco> enderecos) {
+        this.enderecos = enderecos;
+    }
+
+    public List<Simulacao> getSimulacoes() {
+        return simulacoes;
+    }
+
+    public void setSimulacoes(List<Simulacao> simulacoes) {
+        this.simulacoes = simulacoes;
     }
 }

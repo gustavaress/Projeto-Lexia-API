@@ -1,68 +1,77 @@
 package br.com.fiap.service;
 
 import br.com.fiap.dao.EmpresaDAO;
-import br.com.fiap.dto.empresa.CadastrarEmpresaDto;
+import br.com.fiap.dao.EnderecoDAO;
 import br.com.fiap.dto.empresa.AtualizarEmpresaDto;
+import br.com.fiap.dto.empresa.CadastrarEmpresaDto;
 import br.com.fiap.dto.empresa.ListarEmpresaDto;
+import br.com.fiap.exception.CampoJaCadastradoException;
 import br.com.fiap.exception.EntidadeNaoEncontradaException;
-import br.com.fiap.exception.RegraNegocioException;
 import br.com.fiap.mapper.EmpresaMapper;
 import br.com.fiap.model.Empresa;
+import br.com.fiap.model.Endereco;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class EmpresaService {
 
-    private final EmpresaDAO empresaDAO;
-    private final EmpresaMapper empresaMapper;
+    @Inject
+    private EmpresaDAO empresaDAO;
 
     @Inject
-    public EmpresaService(EmpresaDAO empresaDAO, EmpresaMapper empresaMapper) {
-        this.empresaDAO = empresaDAO;
-        this.empresaMapper = empresaMapper;
-    }
+    private EnderecoDAO enderecoDAO;
 
-    public ListarEmpresaDto cadastrar(CadastrarEmpresaDto dto)
-            throws SQLException, RegraNegocioException, EntidadeNaoEncontradaException {
+    @Inject
+    private EmpresaMapper empresaMapper;
 
+    @Transactional
+    public ListarEmpresaDto cadastrar(CadastrarEmpresaDto dto) throws SQLException, EntidadeNaoEncontradaException, CampoJaCadastradoException {
         Empresa empresa = empresaMapper.toModel(dto);
+        
+        List<Endereco> enderecos = new ArrayList<>();
+        for (Integer id : dto.getIdEnderecos()) {
+            enderecos.add(enderecoDAO.buscarPorId(id));
+        }
+        empresa.setEnderecos(enderecos);
+        
         empresaDAO.inserir(empresa);
-
         return empresaMapper.toDto(empresa);
     }
 
-    public List<ListarEmpresaDto> listarTodas() throws SQLException {
-        return empresaDAO.listarTodos()
-                .stream()
-                .map(empresaMapper::toDto)
-                .collect(Collectors.toList());
+    public List<ListarEmpresaDto> listarTodos() throws SQLException {
+        return empresaDAO.listarTodos().stream().map(empresaMapper::toDto).collect(Collectors.toList());
     }
 
-    public ListarEmpresaDto buscarPorId(int id)
-            throws SQLException, EntidadeNaoEncontradaException {
-
-        Empresa empresa = empresaDAO.buscarPorCodigo(id);
+    public ListarEmpresaDto buscarPorId(int id) throws SQLException, EntidadeNaoEncontradaException {
+        Empresa empresa = empresaDAO.buscarPorId(id);
         return empresaMapper.toDto(empresa);
     }
 
-    public ListarEmpresaDto atualizar(int id, AtualizarEmpresaDto dto)
-            throws SQLException, EntidadeNaoEncontradaException {
-
-        Empresa existente = empresaDAO.buscarPorCodigo(id);
+    @Transactional
+    public ListarEmpresaDto atualizar(int id, AtualizarEmpresaDto dto) throws SQLException, EntidadeNaoEncontradaException, CampoJaCadastradoException {
+        Empresa existente = empresaDAO.buscarPorId(id);
         empresaMapper.toModel(dto, existente);
-        empresaDAO.atualizar(existente);
 
+        List<Endereco> enderecos = new ArrayList<>();
+        for (Integer idEndereco : dto.getIdEnderecos()) {
+            enderecos.add(enderecoDAO.buscarPorId(idEndereco));
+        }
+        existente.setEnderecos(enderecos);
+
+        empresaDAO.atualizar(existente);
         return empresaMapper.toDto(existente);
     }
 
-    public void deletar(int id)
-            throws SQLException, EntidadeNaoEncontradaException {
-
+    @Transactional
+    public void deletar(int id) throws SQLException, EntidadeNaoEncontradaException {
+        empresaDAO.buscarPorId(id);
         empresaDAO.deletar(id);
     }
 }

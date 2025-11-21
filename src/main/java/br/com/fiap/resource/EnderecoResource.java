@@ -18,67 +18,37 @@ import java.sql.SQLException;
 @Produces(MediaType.APPLICATION_JSON)
 public class EnderecoResource {
 
-    private final EnderecoService enderecoService;
-
     @Inject
-    public EnderecoResource(EnderecoService enderecoService) {
-        this.enderecoService = enderecoService;
-    }
+    private EnderecoService enderecoService;
 
     @POST
-    public Response cadastrar(@Valid CadastrarEnderecoDto dto) {
-        try {
-            ListarEnderecoDto endereco = enderecoService.cadastrar(dto);
-            return Response.status(Response.Status.CREATED).entity(endereco).build();
-        } catch (SQLException e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Erro ao cadastrar endereço.").build();
-        }
+    public Response cadastrar(@Valid CadastrarEnderecoDto dto) throws SQLException {
+        ListarEnderecoDto endereco = enderecoService.cadastrar(dto);
+        return Response.status(Response.Status.CREATED).entity(endereco).build();
     }
 
     @GET
-    public Response listarTodos() {
-        try {
-            return Response.ok(enderecoService.listarTodos()).build();
-        } catch (SQLException e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Erro ao listar endereços.").build();
-        }
+    public Response listarTodos() throws SQLException {
+        return Response.ok(enderecoService.listarTodos()).build();
     }
 
     @GET
     @Path("/{id}")
-    public Response buscarPorId(@PathParam("id") int id) {
-        try {
-            return Response.ok(enderecoService.buscarPorId(id)).build();
-        } catch (EntidadeNaoEncontradaException e) {
-            return Response.status(Response.Status.NOT_FOUND).entity(e.getMessage()).build();
-        } catch (SQLException e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Erro ao buscar endereço.").build();
-        }
+    public Response buscarPorId(@PathParam("id") int id) throws SQLException, EntidadeNaoEncontradaException {
+        return Response.ok(enderecoService.buscarPorId(id)).build();
     }
 
     @PUT
     @Path("/{id}")
-    public Response atualizar(@PathParam("id") int id, @Valid AtualizarEnderecoDto dto) {
-        try {
-            ListarEnderecoDto endereco = enderecoService.atualizar(id, dto);
-            return Response.ok(endereco).build();
-        } catch (EntidadeNaoEncontradaException e) {
-            return Response.status(Response.Status.NOT_FOUND).entity(e.getMessage()).build();
-        } catch (SQLException e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Erro ao atualizar endereço.").build();
-        }
+    public Response atualizar(@PathParam("id") int id, @Valid AtualizarEnderecoDto dto) throws SQLException, EntidadeNaoEncontradaException {
+        ListarEnderecoDto endereco = enderecoService.atualizar(id, dto);
+        return Response.ok(endereco).build();
     }
 
     @DELETE
     @Path("/{id}")
-    public Response deletar(@PathParam("id") int id) {
-        try {
-            enderecoService.deletar(id);
-            return Response.noContent().build();
-        } catch (EntidadeNaoEncontradaException e) {
-            return Response.status(Response.Status.NOT_FOUND).entity(e.getMessage()).build();
-        } catch (SQLException e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Erro ao deletar endereço.").build();
-        }
+    public Response deletar(@PathParam("id") int id) throws SQLException, EntidadeNaoEncontradaException {
+        enderecoService.deletar(id);
+        return Response.noContent().build();
     }
 }

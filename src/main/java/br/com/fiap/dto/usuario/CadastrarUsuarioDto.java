@@ -1,30 +1,15 @@
 package br.com.fiap.dto.usuario;
 
 import jakarta.validation.constraints.*;
-import java.time.LocalDate;
+import java.util.List;
 
 public class CadastrarUsuarioDto {
-
-    @NotBlank(message = "O nome é obrigatório.")
-    private String nome;
-
-    @Email(message = "Email inválido.")
-    @NotBlank(message = "O email é obrigatório.")
-    private String email;
-
-    @NotBlank(message = "O telefone é obrigatório.")
-    private String telefone;
-
-    @NotNull(message = "A data de nascimento é obrigatória.")
-    private LocalDate dataNascimento;
-
-    @NotNull(message = "O ID do endereço é obrigatório.")
-    private Integer idEndereco;
 
     @NotBlank(message = "O username é obrigatório.")
     private String username;
 
     @NotBlank(message = "A senha é obrigatória.")
+    @Size(min = 8, message = "A senha deve ter no mínimo 8 caracteres.")
     private String senha;
 
     @Positive(message = "O salário deve ser maior que zero.")
@@ -36,22 +21,10 @@ public class CadastrarUsuarioDto {
     @NotNull(message = "O ID da empresa é obrigatório.")
     private Integer idEmpresa;
 
+    @NotEmpty(message = "A lista de IDs de endereço não pode ser vazia.")
+    private List<Integer> idEnderecos;
+
     // Getters e Setters
-    public String getNome() { return nome; }
-    public void setNome(String nome) { this.nome = nome; }
-
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-
-    public String getTelefone() { return telefone; }
-    public void setTelefone(String telefone) { this.telefone = telefone; }
-
-    public LocalDate getDataNascimento() { return dataNascimento; }
-    public void setDataNascimento(LocalDate dataNascimento) { this.dataNascimento = dataNascimento; }
-
-    public Integer getIdEndereco() { return idEndereco; }
-    public void setIdEndereco(Integer idEndereco) { this.idEndereco = idEndereco; }
-
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
 
@@ -66,4 +39,7 @@ public class CadastrarUsuarioDto {
 
     public Integer getIdEmpresa() { return idEmpresa; }
     public void setIdEmpresa(Integer idEmpresa) { this.idEmpresa = idEmpresa; }
+
+    public List<Integer> getIdEnderecos() { return idEnderecos; }
+    public void setIdEnderecos(List<Integer> idEnderecos) { this.idEnderecos = idEnderecos; }
 }
